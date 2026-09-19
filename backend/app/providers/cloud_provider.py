@@ -152,7 +152,22 @@ class CloudProvider(BaseLLMProvider):
         system_prompt: str,
         temperature: float
     ) -> AsyncGenerator[str, None]:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model}:streamGenerateContent?key={self.gemini_key}&alt=sse"
+        # Normalize and upgrade model name
+        model_name = (self.gemini_model or "gemini-3.6-flash").strip()
+        if model_name.startswith("models/"):
+            model_name = model_name.replace("models/", "", 1)
+
+        # Automatically remap deprecated / unavailable models
+        if model_name in [
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-preview",
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-001",
+            "gemini-1.5-flash",
+            "gemini-1.5-flash-latest"
+        ]:
+            model_name = "gemini-3.6-flash"
+
         headers = {"Content-Type": "application/json"}
         
         contents = []
@@ -169,9 +184,38 @@ class CloudProvider(BaseLLMProvider):
             "generationConfig": {"temperature": temperature}
         }
 
+        async def _call_gemini_endpoint(target_model: str, client: httpx.AsyncClient):
+            req_url = f"https://generativelanguage.googleapis.com/v1beta/models/{target_model}:streamGenerateContent?key={self.gemini_key}&alt=sse"
+            return client.stream("POST", req_url, headers=headers, json=payload)
+
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
-                async with client.stream("POST", url, headers=headers, json=payload) as resp:
+                async with await _call_gemini_endpoint(model_name, client) as resp:
+                    # If 404 (model deprecated or not available to project), retry with gemini-3.6-flash
+                    if resp.status_code == 404 and model_name != "gemini-3.6-flash":
+                        logger.warning(f"Gemini model {model_name} returned 404, falling back to gemini-3.6-flash...")
+                        async with await _call_gemini_endpoint("gemini-3.6-flash", client) as retry_resp:
+                            if retry_resp.status_code != 200:
+                                error_body = await retry_resp.aread()
+                                yield f"\n\n**Gemini API Error ({retry_resp.status_code}):** {error_body.decode('utf-8')}"
+                                return
+                            async for line in retry_resp.aiter_lines():
+                                if not line or not line.startswith("data: "):
+                                    continue
+                                data_str = line[6:].strip()
+                                try:
+                                    event = json.loads(data_str)
+                                    candidates = event.get("candidates", [])
+                                    if candidates:
+                                        parts = candidates[0].get("content", {}).get("parts", [])
+                                        for p in parts:
+                                            text = p.get("text", "")
+                                            if text:
+                                                yield text
+                                except json.JSONDecodeError:
+                                    continue
+                        return
+
                     if resp.status_code != 200:
                         error_body = await resp.aread()
                         yield f"\n\n**Gemini API Error ({resp.status_code}):** {error_body.decode('utf-8')}"

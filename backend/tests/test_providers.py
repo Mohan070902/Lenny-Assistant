@@ -43,3 +43,9 @@ async def test_cloud_provider_missing_keys():
 
     full_text = "".join(tokens)
     assert "Not Configured" in full_text
+
+def test_gemini_model_normalization():
+    provider = CloudProvider()
+    provider.gemini_model = "models/gemini-2.5-flash"
+    assert provider.gemini_model is not None
+
