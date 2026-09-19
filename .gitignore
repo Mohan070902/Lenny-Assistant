@@ -30,6 +30,9 @@ wheels/
 .coverage
 htmlcov/
 *.log
+*.db
+*.sqlite
+*.sqlite3
 
 # Node & Frontend
 frontend/node_modules/
