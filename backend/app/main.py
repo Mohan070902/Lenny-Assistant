@@ -20,10 +20,16 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up The Lenny Growth Assistant API...")
-    await init_db_with_fallback()
+    try:
+        await init_db_with_fallback()
+    except Exception as e:
+        logger.error(f"Error during DB initialization: {e}", exc_info=True)
     yield
     logger.info("Shutting down API...")
-    await engine.dispose()
+    try:
+        await engine.dispose()
+    except Exception:
+        pass
 
 
 app = FastAPI(
