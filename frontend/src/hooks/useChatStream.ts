@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Message, SourceItem, ArtifactItem } from '../types';
+import { API_BASE } from '../lib/api';
 
 interface UseChatStreamOptions {
   sessionId: string;
@@ -43,7 +44,7 @@ export function useChatStream({ sessionId, provider, mode, onArtifactReceived }:
     setStatusText('Initiating conversation...');
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch(`${API_BASE}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

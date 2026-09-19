@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { SessionListItem, ArtifactItem, HealthStatus } from './types';
+import { SessionListItem, ArtifactItem, HealthStatus, Message } from './types';
 import { fetchSessions, createSession, fetchSession, deleteSession, checkHealth } from './lib/api';
 import { SessionSidebar } from './components/Chat/SessionSidebar';
 import { ChatPane } from './components/Chat/ChatPane';
@@ -87,7 +87,7 @@ export const App: React.FC = () => {
         const latestMsgWithArtifact = fullSession.messages
           .slice()
           .reverse()
-          .find((m) => m.artifacts && m.artifacts.length > 0);
+          .find((m: Message) => m.artifacts && m.artifacts.length > 0);
         if (latestMsgWithArtifact && latestMsgWithArtifact.artifacts?.length) {
           setActiveArtifact(latestMsgWithArtifact.artifacts[latestMsgWithArtifact.artifacts.length - 1]);
         }
