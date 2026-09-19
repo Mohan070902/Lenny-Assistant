@@ -10,10 +10,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install CPU-only torch to save bandwidth and memory
-COPY requirements.txt .
+COPY backend/requirements.txt requirements.txt
 RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
 
-COPY . .
+# Copy backend application source code
+COPY backend/ .
 
 ENV PORT=8000
 EXPOSE 8000
