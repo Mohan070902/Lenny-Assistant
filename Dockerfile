@@ -5,7 +5,7 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app \
-    PORT=8000
+    PORT=10000
 
 # Install system dependencies for postgres and compilation
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -21,6 +21,6 @@ RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/wh
 # Copy backend application source code
 COPY backend/ .
 
-EXPOSE 8000
+EXPOSE 10000
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}"]

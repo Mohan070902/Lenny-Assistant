@@ -19,17 +19,27 @@ async def check_health(db: AsyncSession = Depends(get_db)):
         await db.execute(text("SELECT 1"))
         db_status = "connected"
 
-        # Check pgvector
-        vec_res = await db.execute(text("SELECT installed_version FROM pg_available_extensions WHERE name = 'vector'"))
-        row = vec_res.fetchone()
-        if row and row[0]:
-            pgvector_status = f"installed ({row[0]})"
+        from app.database import active_db_url
+        if "postgresql" in active_db_url:
+            try:
+                # Check pgvector
+                vec_res = await db.execute(text("SELECT installed_version FROM pg_available_extensions WHERE name = 'vector'"))
+                row = vec_res.fetchone()
+                if row and row[0]:
+                    pgvector_status = f"installed ({row[0]})"
+            except Exception:
+                pgvector_status = "unavailable"
+        else:
+            pgvector_status = "sqlite fallback (vector emulation)"
 
         # Count chunks
-        count_res = await db.execute(text("SELECT COUNT(*) FROM transcript_chunks"))
-        c_row = count_res.fetchone()
-        if c_row:
-            chunks_indexed = c_row[0]
+        try:
+            count_res = await db.execute(text("SELECT COUNT(*) FROM transcript_chunks"))
+            c_row = count_res.fetchone()
+            if c_row:
+                chunks_indexed = c_row[0]
+        except Exception:
+            pass
     except Exception as e:
         db_status = f"error: {str(e)[:50]}"
 

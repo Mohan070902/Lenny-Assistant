@@ -28,8 +28,11 @@ def is_db_reachable(db_url: str) -> bool:
         clean_url = db_url.replace("postgresql+asyncpg://", "http://").replace("postgresql://", "http://").replace("postgres://", "http://")
         parsed = urlparse(clean_url)
         host = parsed.hostname or "localhost"
+        # If host is localhost/127.0.0.1 and DATABASE_URL was not explicitly set in environment, don't block
+        if host in ("localhost", "127.0.0.1") and "DATABASE_URL" not in os.environ:
+            return False
         port = parsed.port or 5432
-        with socket.create_connection((host, port), timeout=1.5):
+        with socket.create_connection((host, port), timeout=1.0):
             return True
     except (OSError, socket.timeout):
         return False

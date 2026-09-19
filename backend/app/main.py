@@ -70,3 +70,13 @@ async def root():
         "docs": "/docs",
         "health": f"{settings.API_V1_STR}/health"
     }
+
+@app.get("/health")
+async def health_alias():
+    return {"status": "ok", "service": settings.PROJECT_NAME}
+
+if __name__ == "__main__":
+    import os
+    import uvicorn
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port)
