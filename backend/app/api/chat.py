@@ -20,6 +20,10 @@ from app.skills.artifact_generator import ARTIFACT_SYSTEM_INSTRUCTION, extract_a
 logger = logging.getLogger("chat_api")
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
+def sse_pack(data: dict) -> str:
+    return "data: " + json.dumps(data) + "\n\n"
+
+
 DEFAULT_SYSTEM_PROMPT = """You are "The Lenny Growth Assistant", an authoritative AI advisor built strictly on the wisdom of Lenny's Podcast transcripts.
 
 Your mission is to provide high-impact, actionable guidance for product managers, growth leaders, and founders.
@@ -70,7 +74,7 @@ async def stream_chat(
 
         try:
             # 1. Yield initial status
-            yield f"data: {json.dumps({'type': 'status', 'content': 'Searching Lenny\'s podcast archive...'})}\n\n"
+            yield sse_pack({"type": "status", "content": "Searching Lenny's podcast archive..."})
 
             # 2. Retrieve relevant transcripts
             chunks = await retriever.retrieve_relevant_chunks(req.message)
@@ -86,11 +90,11 @@ async def stream_chat(
             ]
 
             # 3. Emit sources payload to client
-            yield f"data: {json.dumps({'type': 'sources', 'sources': retrieved_sources})}\n\n"
+            yield sse_pack({"type": "sources", "sources": retrieved_sources})
 
             # 4. Construct prompt based on mode
             if req.mode == "ship30":
-                yield f"data: {json.dumps({'type': 'status', 'content': 'Synthesizing Ship 30 for 30 essay...'})}\n\n"
+                yield sse_pack({"type": "status", "content": "Synthesizing Ship 30 for 30 essay..."})
                 system_prompt = build_ship30_prompt(req.message, chunks)
                 messages = [{"role": "user", "content": req.message}]
             else:
@@ -105,12 +109,12 @@ async def stream_chat(
             # 5. Stream LLM tokens
             async for token in llm.generate_response(messages, system_prompt):
                 full_response_text += token
-                yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"
+                yield sse_pack({"type": "token", "content": token})
 
             # 6. Extract any generated artifacts
             cleaned_text, artifacts = extract_artifacts(full_response_text)
             for art in artifacts:
-                yield f"data: {json.dumps({'type': 'artifact', 'artifact': art.model_dump()})}\n\n"
+                yield sse_pack({"type": "artifact", "artifact": art.model_dump()})
 
             # 7. Persist messages and artifacts asynchronously in a fresh session
             try:
@@ -155,7 +159,7 @@ async def stream_chat(
 
         except Exception as e:
             logger.error(f"Chat streaming error: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
+            yield sse_pack({"type": "error", "content": str(e)})
 
         yield "data: [DONE]\n\n"
 
