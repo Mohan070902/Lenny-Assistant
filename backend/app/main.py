@@ -33,11 +33,11 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
+# Configure CORS (allow all origins for cloud deployments, e.g. Vercel frontend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

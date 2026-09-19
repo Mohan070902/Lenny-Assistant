@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: lenny-growth-assistant-backend
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: DEFAULT_LLM_PROVIDER
+        value: ollama
